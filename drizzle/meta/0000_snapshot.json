@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "96fe6ef0-8d1f-4289-82a7-14e2c04b4df2",
+  "id": "93e199d4-f7c7-482c-8d8b-9da20eaa51e6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "chat_members": {
@@ -186,6 +186,13 @@
         },
         "bio": {
           "name": "bio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "hobbies": {
+          "name": "hobbies",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
