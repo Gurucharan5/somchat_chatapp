@@ -1,10 +1,10 @@
-CREATE TABLE IF NOT EXISTS `chat_members` (
+CREATE TABLE `chat_members` (
 	`chat_id` text NOT NULL,
 	`user_id` text NOT NULL,
 	`role` text
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `chats` (
+CREATE TABLE `chats` (
 	`id` text PRIMARY KEY NOT NULL,
 	`type` text,
 	`title` text,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `chats` (
 	`updated_at` integer
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `messages` (
+CREATE TABLE `messages` (
 	`id` text PRIMARY KEY NOT NULL,
 	`chat_id` text NOT NULL,
 	`sender_id` text NOT NULL,
@@ -24,12 +24,13 @@ CREATE TABLE IF NOT EXISTS `messages` (
 	`seen_at` integer
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS `users` (
+CREATE TABLE `users` (
 	`uid` text PRIMARY KEY NOT NULL,
 	`email` text,
 	`username` text,
 	`avatar_url` text,
 	`bio` text,
+	`hobbies` text,
 	`last_seen` integer,
 	`online_status` text,
 	`chat_theme` text,
