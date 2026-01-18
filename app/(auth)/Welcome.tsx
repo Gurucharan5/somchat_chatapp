@@ -1,3 +1,4 @@
+import { createUserDocumentOnSignIn } from "@/src/services/firebase/createUserDocument";
 import type { SignInSuccessResponse } from "@react-native-google-signin/google-signin";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Link } from "expo-router";
@@ -23,7 +24,12 @@ export default function Welcome() {
       }
 
       const credential = GoogleAuthProvider.credential(idToken);
-      await signInWithCredential(auth, credential);
+      const result = await signInWithCredential(auth, credential);
+      await createUserDocumentOnSignIn(result.user, {
+        platform: "android",
+        deviceId: `android_${Date.now()}`,
+        fcmToken: null  // we'll add FCM later
+      });
       console.log("🔥 Firebase login success");
     } 
     catch (error: any) {

@@ -1,7 +1,9 @@
+import { useLocalUser } from "@/src/hooks/useLocalUser";
 import { Feather } from "@expo/vector-icons";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 
 export default function HomeHeader() {
+  const user = useLocalUser();
   return (
     <View className="flex-row items-center justify-between px-4 py-3 bg-[#1c1b1e]">
 
@@ -18,10 +20,20 @@ export default function HomeHeader() {
         <TouchableOpacity className="mr-5">
           <Feather name="edit-3" size={18} color="black" />
         </TouchableOpacity>
-        <TouchableOpacity className="w-8 h-8 rounded-full bg-red-400 items-center justify-center">
+        {/* <TouchableOpacity className="w-8 h-8 rounded-full bg-red-400 items-center justify-center">
             <Feather name="user" size={18} color="black" />
+        </TouchableOpacity> */}
+        {/* Avatar bubble */}
+        <TouchableOpacity className="w-8 h-8 rounded-full overflow-hidden bg-gray-300 items-center justify-center">
+          {user?.avatarUrl ? (
+            <Image
+              source={{ uri: user.avatarUrl }}
+              className="w-full h-full"
+            />
+          ) : (
+            <Feather name="user" size={18} color="black" />
+          )}
         </TouchableOpacity>
-
       </View>
 
     </View>
