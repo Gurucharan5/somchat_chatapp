@@ -1,71 +1,205 @@
 import HomeHeader from "@/components/HomeHeader";
+import { auth, db as firestore } from "@/services/firebase";
 import { Ionicons } from "@expo/vector-icons";
-import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
-
-const chats = [
-  {
-    id: "1",
-    name: "Aii",
-    message: "It's like I find a solution...",
-    time: "1:50 PM",
-    avatar: "https://i.pravatar.cc/150?img=3",
-    delivered: true,
-  },
-  {
-    id: "2",
-    name: "Priya Prachi",
-    message: "My brother totally reset my phone",
-    time: "Fri",
-    avatar: "https://i.pravatar.cc/150?img=7",
-    delivered: true,
-  },
-  {
-    id: "3",
-    name: "Saved Messages",
-    message: "Aii https://google.com",
-    time: "Thu",
-    avatar: "https://via.placeholder.com/100/4fb5f5",
-  },
-];
+import { router } from "expo-router";
+import {
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  orderBy,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
+import {
+  FlatList,
+  Image,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function Home() {
+  const currentUid = auth.currentUser?.uid;
+  const [chats, setChats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [usersMap, setUsersMap] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (!currentUid || chats.length === 0) return;
+
+    const fetchUsers = async () => {
+      const map: Record<string, any> = {};
+
+      await Promise.all(
+        chats.map(async (chat) => {
+          const otherUid = chat.members.find(
+            (uid: string) => uid !== currentUid
+          );
+
+          if (!otherUid || usersMap[otherUid]) return;
+
+          const snap = await getDoc(doc(firestore, "users", otherUid));
+          if (snap.exists()) {
+            map[otherUid] = snap.data();
+          }
+        })
+      );
+
+      if (Object.keys(map).length > 0) {
+        setUsersMap((prev) => ({ ...prev, ...map }));
+      }
+    };
+
+    fetchUsers();
+  }, [chats]);
+
+  useEffect(() => {
+    if (!currentUid) return;
+
+    const q = query(
+      collection(firestore, "chats"),
+      where("members", "array-contains", currentUid),
+      orderBy("lastMessageAt", "desc")
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setChats(list);
+      setLoading(false);
+    });
+
+    return unsub;
+  }, []);
+
   return (
     <View className="flex-1 bg-[#1c1b1e]">
       {/* Header */}
       <View className="pt-12 pb-2">
         <HomeHeader />
       </View>
-      
 
       {/* Chat List */}
-      <FlatList
-        data={chats}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingVertical: 6 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity className="flex-row items-center px-4 py-3">
-            <Image
-              source={{ uri: item.avatar }}
-              className="w-12 h-12 rounded-full"
+      {loading ? (
+        <Text className="text-gray-400 text-center mt-10">
+          Loading chats…
+        </Text>
+      ) : chats.length === 0 ? (
+        <Text className="text-gray-500 text-center mt-10">
+          No chats yet
+        </Text>
+      ) : (
+        <FlatList
+          data={chats}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingVertical: 6 }}
+          renderItem={({ item }) => (
+            <ChatRow
+              chat={item}
+              currentUid={currentUid!}
+              usersMap={usersMap}
             />
-            <View className="flex-1 ml-3">
-              <Text className="text-white font-semibold text-base">{item.name}</Text>
-              <Text className="text-gray-400 mt-0.5" numberOfLines={1}>
-                {item.message}
-              </Text>
-            </View>
-            <View className="items-end ml-2">
-              <Text className="text-gray-400 text-xs">{item.time}</Text>
-              {item.delivered && (
-                <Ionicons name="checkmark-done" size={18} color="#ff2bac" style={{ marginTop: 4 }} />
-              )}
-            </View>
-          </TouchableOpacity>
-        )}
-        ItemSeparatorComponent={() => (
-          <View className="ml-16 border-b border-gray-800" />
-        )}
-      />
+          )}
+          ItemSeparatorComponent={() => (
+            <View className="ml-16 border-b border-gray-800" />
+          )}
+        />
+
+      )}
     </View>
+  );
+}
+
+/* ---------- Chat Row ---------- */
+
+function ChatRow({
+  chat,
+  currentUid,
+  usersMap,
+}: {
+  chat: any;
+  currentUid: string;
+  usersMap: Record<string, any>;
+}) {
+  const otherUid = chat.members.find(
+    (uid: string) => uid !== currentUid
+  );
+  const unread =
+  chat.unreadCount?.[currentUid] ?? 0;
+
+  const user = otherUid ? usersMap[otherUid] : null;
+
+  return (
+    <TouchableOpacity
+      className="flex-row items-center px-4 py-3"
+      onPress={() => {
+        console.log("Open chat:", chat.id);
+        // Reset unread count
+        updateDoc(doc(firestore, "chats", chat.id), {
+          [`unreadCount.${currentUid}`]: 0,
+        });
+
+        router.push(`/chat/${chat.id}`);
+      }}
+    >
+      {/* Avatar */}
+      <View className="w-12 h-12 rounded-full bg-gray-600 overflow-hidden items-center justify-center">
+        {user?.avatarUrl ? (
+          <Image
+            source={{ uri: user.avatarUrl }}
+            className="w-full h-full"
+          />
+        ) : (
+          <Text className="text-white font-semibold">
+            {user?.username?.charAt(0)?.toUpperCase() || "?"}
+          </Text>
+        )}
+      </View>
+
+      <View className="flex-1 ml-3">
+        <Text className="text-white font-semibold text-base">
+          {user?.username || "Unknown"}
+        </Text>
+        <Text
+          className="text-gray-400 mt-0.5"
+          numberOfLines={1}
+        >
+          {chat.lastMessage || "No messages yet"}
+        </Text>
+      </View>
+
+      <View className="items-end ml-2">
+        <Text className="text-gray-400 text-xs">
+          {chat.lastMessageAt?.toDate
+            ? chat.lastMessageAt.toDate().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : ""}
+        </Text>
+
+        {unread > 0 ? (
+          <View className="bg-[#ff2bac] min-w-[18px] h-[18px] px-1 rounded-full items-center justify-center mt-1">
+            <Text className="text-white text-[11px] font-semibold">
+              {unread > 99 ? "99+" : unread}
+            </Text>
+          </View>
+        ) : (
+          <Ionicons
+            name="checkmark-done"
+            size={18}
+            color="#888"
+            style={{ marginTop: 4 }}
+          />
+        )}
+
+      </View>
+    </TouchableOpacity>
   );
 }

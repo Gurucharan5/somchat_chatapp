@@ -44,6 +44,7 @@ import { openDatabaseSync } from "expo-sqlite";
 
 const MIGRATION_FILES: Record<string, any> = {
   "0000_unique_ego.sql": require("../../drizzle/0000_unique_ego.sql"),
+  "0001_tearful_scarlet_witch.sql": require("../../drizzle/0001_tearful_scarlet_witch.sql"),
 };
 
 export async function runMigrations() {

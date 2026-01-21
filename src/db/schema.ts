@@ -8,6 +8,8 @@ export const users = sqliteTable("users", {
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
   hobbies: text("hobbies"),
+  handle: text("handle"),          // NEW
+  handleLower: text("handle_lower"), // NEW
   lastSeen: integer("last_seen"),
   onlineStatus: text("online_status"),
   chatTheme: text("chat_theme"),

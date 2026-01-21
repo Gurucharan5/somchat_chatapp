@@ -24,11 +24,11 @@ export async function createUserDocumentOnSignIn(user: User, extra?: any) {
         uid: user.uid,
         email: user.email ?? null,
         username: user.displayName ?? extra?.username ?? "User",
-        avatar_url: user.photoURL ?? null,
+        avatarUrl: user.photoURL ?? null,
         bio: "",
         hobbies: [],
         created_at: serverTimestamp(),
-        updated_at: serverTimestamp(),
+        updatedAt: serverTimestamp(),
         app_theme: "system",
         chat_theme: "default",
 

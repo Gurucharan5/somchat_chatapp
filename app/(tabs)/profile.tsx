@@ -1,19 +1,27 @@
+import BottomSheetCreateHandle from "@/components/BottomSheetCreateHandle";
+import { uploadToCloudinaryWithProgress } from "@/services/cloudinary";
 import { auth, db as firestore } from "@/services/firebase";
+import { emitUserUpdated } from "@/src/db/events";
 import { useLocalUser } from "@/src/hooks/useLocalUser";
+import { useToast } from "@/src/toast/useToast";
 import { Ionicons } from "@expo/vector-icons";
+import NetInfo from "@react-native-community/netinfo";
+import { BlurView } from "expo-blur";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { doc, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 import {
+  ActivityIndicator,
   Image,
   Modal,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 const PREDEFINED_HOBBIES = [
@@ -31,12 +39,17 @@ const PREDEFINED_HOBBIES = [
 
 export default function ProfileScreen() {
   const user = useLocalUser();
+  const {showToast} = useToast();
   const [editModal, setEditModal] = useState(false);
   const [tempUsername, setTempUsername] = useState("");
   const [tempBio, setTempBio] = useState("");
   const [hobbies, setHobbies] = useState<string[]>([]);
   const [customHobby, setCustomHobby] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [showHandleSheet, setShowHandleSheet] = useState(false);
+
 
 
   useEffect(() => {
@@ -69,56 +82,84 @@ export default function ProfileScreen() {
     router.replace("/(auth)/Welcome");
   };
 
-
-  const saveChanges = async () => {
-    if (!user) return;
-
-    try {
-      setSaving(true);
-
-      const userRef = doc(firestore, "users", user.uid);
-
-      await updateDoc(userRef, {
-        username: tempUsername,
-        bio: tempBio,
-        hobbies: hobbies,
-        updatedAt: Date.now(),
-      });
-
-      console.log("[SAVE] Saving to Firestore", {
-        username: tempUsername,
-        bio: tempBio,
-        hobbies,
-      });
-
-      // Firestore updated — syncUsers() will update SQLite
-      setEditModal(false);
-    } catch (err) {
-      console.error("Profile update failed:", err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-
-
-  const openEditModal = () => {
-    setTempUsername(user?.username ?? "");
-    setTempBio(user?.bio ?? "");
-    setEditModal(true);
-  };
-
   const chooseAvatar = async () => {
+    const net = await NetInfo.fetch();
+    if (!net.isConnected) {
+      alert("Internet is required to upload avatar.");
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       quality: 0.7,
       allowsEditing: true,
       aspect: [1, 1],
     });
 
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      // TODO: upload to Cloudinary & update Firestore
+    if (result.canceled) return;
+
+    const uri = result.assets[0].uri;
+
+    try {
+      setUploadingAvatar(true);
+      setUploadPercent(0);
+
+      const uploadUrl = await uploadToCloudinaryWithProgress(uri, (percent) => {
+        setUploadPercent(percent);
+      });
+
+      await updateDoc(doc(firestore, "users", user.uid), {
+        avatarUrl: uploadUrl,
+        updatedAt: Date.now(),
+      });
+
+      emitUserUpdated();
+      showToast("Profile avatar updated!",{type: "success",duration: 1500});
+    } catch (err) {
+      console.error("Avatar upload failed:", err);
+      alert("Upload failed, try again.");
+    } finally {
+      setUploadingAvatar(false);
+      setUploadPercent(0);
     }
+
+  };
+
+
+  const saveChanges = async () => {
+    if (!user) return;
+
+    setSaving(true);
+    // Optimistic Local UI Update:
+    emitUserUpdated(); // or local DB update if wanted
+
+    // Close modal immediately:
+    setEditModal(false);
+
+    try {
+      const userRef = doc(firestore, "users", user.uid);
+      await updateDoc(userRef, {
+        username: tempUsername,
+        bio: tempBio,
+        hobbies,
+        updatedAt: Date.now(),
+      });
+      console.log("[SAVE] Saving to Firestore", {
+        username: tempUsername,
+        bio: tempBio,
+        hobbies,
+      });
+    } catch (err) {
+      console.log("Firestore offline, will sync later");
+      // optional: queue offline updates here
+    } finally {
+      setSaving(false);
+    }
+  };
+
+
+  const openEditModal = () => {
+    setTempUsername(user?.username ?? "");
+    setTempBio(user?.bio ?? "");
+    setEditModal(true);
   };
 
   if (!user) {
@@ -149,10 +190,14 @@ export default function ProfileScreen() {
           <Ionicons name="create-outline" size={22} color="white" />
         </TouchableOpacity>
         {/* Avatar */}
-        <TouchableOpacity onPress={chooseAvatar} activeOpacity={0.8}>
-          <View className="w-32 h-32 rounded-full items-center justify-center mb-4"
+        <TouchableOpacity
+          disabled={uploadingAvatar}
+          onPress={chooseAvatar}
+          activeOpacity={0.7}
+        >
+          <View
+            className="w-32 h-32 rounded-full overflow-hidden mb-4"
             style={{
-              backgroundColor: "#111",
               borderWidth: 2,
               borderColor: "#4f46e5",
               shadowColor: "#4f46e5",
@@ -160,24 +205,60 @@ export default function ProfileScreen() {
               shadowOpacity: 0.6,
             }}
           >
+            {/* Avatar Content */}
             {user.avatarUrl ? (
               <Image
                 source={{ uri: user.avatarUrl }}
-                className="w-full h-full rounded-full"
+                className="w-full h-full"
+                style={{ opacity: uploadingAvatar ? 0.3 : 1 }}
               />
             ) : (
-              <Text className="text-white text-4xl font-semibold">
-                {user.username?.charAt(0).toUpperCase()}
-              </Text>
+              <View className="flex-1 items-center justify-center">
+                <Text className="text-white text-4xl font-semibold">
+                  {user.username?.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+
+            {/* Blur + Loader Overlay */}
+            {uploadingAvatar && (
+              <BlurView
+                intensity={50}
+                tint="dark"
+                style={[
+                  StyleSheet.absoluteFillObject,
+                  { justifyContent: "center", alignItems: "center" },
+                ]}
+              >
+                <ActivityIndicator size="large" color="#4f46e5" />
+                <Text className="text-white font-semibold mt-2">
+                  {uploadPercent}%
+                </Text>
+              </BlurView>
             )}
           </View>
         </TouchableOpacity>
+
 
         {/* Username */}
         <Text className="text-white text-2xl font-semibold">{user.username}</Text>
 
         {/* Email */}
         <Text className="text-gray-400 mt-1 text-sm">{user.email}</Text>
+
+        {/* Handle */}
+
+        {/* Handle */}
+        {user.handle ? (
+          <Text className="text-blue-400 text-sm mt-1">@{user.handle}</Text>
+        ) : (
+          <TouchableOpacity onPress={() => setShowHandleSheet(true)}>
+            <Text className="text-blue-500 text-sm mt-1 underline">
+              Create unique handle
+            </Text>
+          </TouchableOpacity>
+        )}
+
 
         {/* Bio */}
         <View className="mt-4 px-4">
@@ -296,6 +377,10 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+      <BottomSheetCreateHandle
+        visible={showHandleSheet}
+        onClose={() => setShowHandleSheet(false)}
+      />
     </View>
   );
 }

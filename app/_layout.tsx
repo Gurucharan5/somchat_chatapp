@@ -1,50 +1,18 @@
+import { auth, db as firestore } from "@/services/firebase";
 import { runMigrations } from "@/src/db/runMigrations";
 import { syncUsers } from "@/src/services/sync/syncUsers";
+import { ToastProvider } from "@/src/toast/ToastProvider";
 import { Slot, router } from "expo-router";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { configureGoogleSignIn } from "../services/googleConfig";
 import { useAuthListener } from "../services/useAuthListener";
+
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const { user, loading } = useAuthListener();
-
-  // // Run migrations BEFORE auth & sync
-  // useEffect(() => {
-  //   (async () => {
-  //     configureGoogleSignIn();
-  //     await runMigrations();
-  //     console.log("DB READY");
-  //     setDbReady(true);
-  //   })();
-  // }, []);
-
-  // // Redirect based on auth
-  // useEffect(() => {
-  //   if (dbReady && !loading) {
-  //     if (user) {
-  //       router.replace("/(tabs)/home");
-  //     } else {
-  //       router.replace("/(auth)/Welcome");
-  //     }
-  //   }
-  // }, [dbReady, user, loading]);
-
-  // // Sync Firestore -> SQLite
-  // useEffect(() => {
-  //   // if (dbReady && user) {
-  //   //   const unsubUsers = syncUsers();
-  //   //   return () => unsubUsers();
-  //   // }
-  //   if (dbReady && user) {
-  //     const timeout = setTimeout(() => {
-  //       syncUsers();
-  //     }, 500); // wait for navigation to settle
-
-  //     return () => clearTimeout(timeout);
-  //   }
-
-  // }, [dbReady, user]);
 
   useEffect(() => {
     (async () => {
@@ -57,6 +25,38 @@ export default function RootLayout() {
       setDbReady(true);
     })();
   }, []);
+
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const userRef = doc(firestore, "users", uid);
+
+    const setOnline = () =>
+      updateDoc(userRef, {
+        online: true,
+        lastSeen: serverTimestamp(),
+      });
+
+    const setOffline = () =>
+      updateDoc(userRef, {
+        online: false,
+        lastSeen: serverTimestamp(),
+      });
+
+    setOnline();
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") setOnline();
+      else setOffline();
+    });
+
+    return () => {
+      sub.remove();
+      setOffline();
+    };
+  }, []);
+
 
   useEffect(() => {
     if (dbReady && !loading) {
@@ -78,5 +78,10 @@ export default function RootLayout() {
 
   if (!dbReady) return null; // or splash screen
 
-  return <Slot />;
+  return (
+    <ToastProvider>
+      <Slot />
+    </ToastProvider>
+    
+  );
 }

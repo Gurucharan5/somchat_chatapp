@@ -1,9 +1,12 @@
 import { useLocalUser } from "@/src/hooks/useLocalUser";
 import { Feather } from "@expo/vector-icons";
+import { useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
+import NewChatBottomSheet from "./NewChatBottomSheet";
 
 export default function HomeHeader() {
   const user = useLocalUser();
+  const [newChatVisible, setNewChatVisible] = useState(false);
   return (
     <View className="flex-row items-center justify-between px-4 py-3 bg-[#1c1b1e]">
 
@@ -17,7 +20,7 @@ export default function HomeHeader() {
 
       {/* Right Bubble */}
       <View className="flex-row items-center px-4 py-2.5 rounded-full border border-white/20 bg-white">
-        <TouchableOpacity className="mr-5">
+        <TouchableOpacity className="mr-5" onPress={()=> setNewChatVisible(true)}>
           <Feather name="edit-3" size={18} color="black" />
         </TouchableOpacity>
         {/* <TouchableOpacity className="w-8 h-8 rounded-full bg-red-400 items-center justify-center">
@@ -35,6 +38,20 @@ export default function HomeHeader() {
           )}
         </TouchableOpacity>
       </View>
+
+      <NewChatBottomSheet
+        visible={newChatVisible}
+        onClose={() => setNewChatVisible(false)}
+        onAddFriends={() => {
+          setNewChatVisible(false);
+          // navigate to Search / Add friends
+        }}
+        onCreateGroup={() => {
+          setNewChatVisible(false);
+          // navigate to Create Group (later)
+        }}
+      />
+
 
     </View>
   );

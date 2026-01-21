@@ -9,7 +9,7 @@ const TabLayout = () => {
       {/* <Tabs.Screen name="calls" options={{title: "Calls"}}/> */}
       <Tabs.Screen name="settings" options={{title: "Settings"}}/> 
       <Tabs.Screen name="profile" options={{title: "Profile", headerShown: false}}/>
-      <Tabs.Screen name="search" options={{title: "Search"}}/>
+      <Tabs.Screen name="search" options={{title: "Search", headerShown: false}}/>
     </Tabs>
   );
 }
