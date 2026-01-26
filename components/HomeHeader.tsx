@@ -1,14 +1,16 @@
+import { colors } from "@/constants/theme";
 import { useLocalUser } from "@/src/hooks/useLocalUser";
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import NewChatBottomSheet from "./NewChatBottomSheet";
+import Typo from "./Typo";
 
 export default function HomeHeader() {
   const user = useLocalUser();
   const [newChatVisible, setNewChatVisible] = useState(false);
   return (
-    <View className="flex-row items-center justify-between px-4 py-3 bg-[#1c1b1e]">
+    <View className="flex-row items-center justify-between px-4 py-3">
 
       {/* Left Bubble */}
       <TouchableOpacity className="px-4 py-3 rounded-full border border-white/20 bg-white">
@@ -16,8 +18,8 @@ export default function HomeHeader() {
       </TouchableOpacity>
 
       {/* Title */}
-      <Text className="text-lg font-semibold text-white">Chats</Text>
-
+      {/* <Text className="text-lg font-semibold text-white">Chats</Text> */}
+      <Typo color={colors.white} size={20} fontWeight={"bold"}>Chats</Typo>
       {/* Right Bubble */}
       <View className="flex-row items-center px-4 py-2.5 rounded-full border border-white/20 bg-white">
         <TouchableOpacity className="mr-5" onPress={()=> setNewChatVisible(true)}>

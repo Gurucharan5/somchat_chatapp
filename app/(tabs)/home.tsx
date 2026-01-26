@@ -1,4 +1,5 @@
 import HomeHeader from "@/components/HomeHeader";
+import ScreenWrapper from "@/components/ScreenWrapper";
 import { auth, db as firestore } from "@/services/firebase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -79,40 +80,43 @@ export default function Home() {
   }, []);
 
   return (
-    <View className="flex-1 bg-[#1c1b1e]">
-      {/* Header */}
-      <View className="pt-12 pb-2">
-        <HomeHeader />
+    <ScreenWrapper showPattern={true}>
+      <View className="flex-1">
+        {/* Header */}
+        <View>
+          <HomeHeader />
+        </View>
+
+        {/* Chat List */}
+        {loading ? (
+          <Text className="text-gray-400 text-center mt-10">
+            Loading chats…
+          </Text>
+        ) : chats.length === 0 ? (
+          <Text className="text-gray-500 text-center mt-10">
+            No chats yet
+          </Text>
+        ) : (
+          <FlatList
+            data={chats}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingVertical: 6 }}
+            renderItem={({ item }) => (
+              <ChatRow
+                chat={item}
+                currentUid={currentUid!}
+                usersMap={usersMap}
+              />
+            )}
+            ItemSeparatorComponent={() => (
+              <View className="ml-16 border-b border-gray-800" />
+            )}
+          />
+
+        )}
       </View>
-
-      {/* Chat List */}
-      {loading ? (
-        <Text className="text-gray-400 text-center mt-10">
-          Loading chats…
-        </Text>
-      ) : chats.length === 0 ? (
-        <Text className="text-gray-500 text-center mt-10">
-          No chats yet
-        </Text>
-      ) : (
-        <FlatList
-          data={chats}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingVertical: 6 }}
-          renderItem={({ item }) => (
-            <ChatRow
-              chat={item}
-              currentUid={currentUid!}
-              usersMap={usersMap}
-            />
-          )}
-          ItemSeparatorComponent={() => (
-            <View className="ml-16 border-b border-gray-800" />
-          )}
-        />
-
-      )}
-    </View>
+    </ScreenWrapper>
+      
   );
 }
 
