@@ -1,5 +1,9 @@
+import Input from "@/components/Input";
+import MessageItem from "@/components/MessageItem";
+import ScreenWrapper from "@/components/ScreenWrapper";
+import { colors, radius, spacingX, spacingY } from "@/constants/theme";
 import { auth, db as firestore } from "@/services/firebase";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { scale, verticalScale } from "@/utils/styling";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   addDoc,
@@ -13,17 +17,15 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
+import * as Icons from 'phosphor-react-native';
 import { useEffect, useState } from "react";
 import {
-  FlatList,
-  KeyboardAvoidingView,
+  FlatList, Keyboard, KeyboardAvoidingView,
   Platform,
-  Text,
-  TextInput,
+  StyleSheet,
   TouchableOpacity,
-  View,
-} from "react-native";
-
+  View
+} from 'react-native';
 /**
  * TEMP UI-only messages
  * Will be replaced with Firestore later
@@ -66,6 +68,27 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<any[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const onPickFile = () => {
+
+  }
 
 
 
@@ -186,131 +209,122 @@ export default function ChatScreen() {
 
 
   return (
-    <View className="flex-1 bg-[#0f0f12]">
-      {/* Header */}
-      <View className="flex-row items-center px-4 pt-12 pb-3 border-b border-white/10 bg-[#1c1b1e]">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="mr-3"
-        >
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-
-        {/* Avatar */}
-        <View className="w-9 h-9 rounded-full bg-gray-600 mr-3" />
-
-        {/* Title */}
-        <View className="flex-1">
-          <Text className="text-white font-semibold text-base">
-            Username
-          </Text>
-          <Text className="text-gray-400 text-xs">
-            {otherTyping
-              ? "typing…"
-              : otherUser?.online
-              ? "online"
-              : otherUser?.lastSeen?.toDate
-              ? `last seen ${otherUser.lastSeen
-                  .toDate()
-                  .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-              : ""}
-          </Text>
-
-        </View>
-
-        <TouchableOpacity>
-          <Feather name="more-vertical" size={20} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Messages */}
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        inverted
-        contentContainerStyle={{ padding: 12 }}
-        renderItem={({ item }) => (
-          <MessageBubble
-            message={{
-              text: item.text,
-              fromMe: item.senderId === currentUid,
-              time: item.createdAt?.toDate
-                ? item.createdAt.toDate().toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "",
-            }}
-          />
-        )}
-      />
-
-
-      {/* Input */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <ScreenWrapper showPattern={true} bgOpacity={0.5}>
+      <KeyboardAvoidingView 
+        behavior={keyboardVisible ? (Platform.OS === 'ios' ? 'padding' : 'height') : undefined}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // ← try 0 or small value
       >
-        <View className="flex-row items-end px-3 py-2 border-t border-white/10 bg-[#1c1b1e]">
-          <View className="flex-row items-center flex-1 bg-[#2a2a2e] rounded-full px-4 py-2">
-            <TextInput
+        {/* Header */}
+        
+        {/* messages */}
+        <View style= {styles.content}>
+          <FlatList 
+            data={messages}
+            inverted={true}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.messageContent}
+            renderItem={({item}) => (
+              <MessageItem item = {item} isDirect={false}/>
+            )}
+            keyExtractor={(item) => item.id}
+          />
+          <View style={styles.footer}>
+            <Input 
               value={text}
-              onChangeText={(t) => {
-                setText(t);
-                setTyping(true);
+              onChangeText={setText}
+              containerStyle={{
+                paddingLeft: spacingX._10,
+                paddingRight: scale(65),
+                borderWidth: 0,
               }}
-              placeholder="Message"
-              placeholderTextColor="#aaa"
-              className="flex-1 text-white max-h-[120px]"
-              multiline
+              placeholder="Type Message..."
+              icon= {
+                <TouchableOpacity style={styles.inputIcon} onPress={onPickFile}>
+                  <Icons.PlusIcon
+                    color={colors.black}
+                    weight="bold"
+                    size={verticalScale(22)}
+                  />
+                </TouchableOpacity>
+              }
             />
-          </View>
+            <View style={styles.inputRightIcon}>
+              <TouchableOpacity style={styles.inputIcon} onPress={sendMessage}>
+                <Icons.PaperPlaneTiltIcon
+                  color={colors.black}
+                  weight="fill"
+                  size={verticalScale(22)}
+                />
 
-          <TouchableOpacity
-            onPress={sendMessage}
-            className="ml-3 w-10 h-10 rounded-full bg-[#ff2bac] items-center justify-center"
-          >
-            <Feather name="send" size={18} color="white" />
-          </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </ScreenWrapper>
   );
 }
 
-/* ---------- Message Bubble ---------- */
-
-function MessageBubble({
-  message,
-}: {
-  message: {
-    text: string;
-    fromMe: boolean;
-    time: string;
-  };
-}) {
-  const isMe = message.fromMe;
-
-  return (
-    <View
-      className={`mb-2 ${
-        isMe ? "items-end" : "items-start"
-      }`}
-    >
-      <View
-        className={`max-w-[75%] px-3 py-2 rounded-2xl ${
-          isMe
-            ? "bg-[#ff2bac] rounded-br-sm"
-            : "bg-[#2a2a2e] rounded-bl-sm"
-        }`}
-      >
-        <Text className="text-white text-base">
-          {message.text}
-        </Text>
-
-        <Text className="text-white/70 text-[10px] mt-1 self-end">
-          {message.time}
-        </Text>
-      </View>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: spacingX._15,
+    paddingTop: spacingY._10,
+    paddingBottom: spacingY._15,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacingX._12,
+  },
+  content: {
+    flex : 1,
+    backgroundColor:  colors.white,
+    borderTopLeftRadius: radius._50,
+    borderTopRightRadius: radius._50,
+    borderCurve: "continuous",
+    overflow: 'hidden',
+    paddingHorizontal: spacingX._15,
+  },
+  footer: {
+    paddingTop: spacingY._7,
+    paddingBottom: verticalScale(22),
+  },
+  messagesContainer: {
+    flex: 1,
+  },
+  messageContent: {
+    padding: spacingX._15,
+    paddingTop: spacingY._20,
+    paddingBottom: spacingY._10,
+    gap: spacingY._12,
+  },
+  plusIcon: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    padding: 8,
+  },
+  inputIcon: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    padding: 8,
+  },
+  inputRightIcon: {
+    position: 'absolute',
+    right: scale(10),
+    top: verticalScale(15),
+    paddingLeft: spacingX._12,
+    borderLeftWidth: 1.5,
+    borderLeftColor: colors.neutral300
+  },
+  selectedFile: {
+    position: 'absolute',
+    height: verticalScale(38),
+    width: verticalScale(38),
+    borderRadius: radius.full,
+    alignSelf: 'center'
+  }
+})
