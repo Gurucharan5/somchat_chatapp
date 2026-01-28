@@ -1,56 +1,15 @@
-// import { Asset } from "expo-asset";
-// import { openDatabaseSync } from "expo-sqlite";
-
-// const MIGRATION_FILES: Record<string, any> = {
-//   "0000_certain_firedrake.sql": require("../../drizzle/0000_certain_firedrake.sql"),
-//   "0001_early_rachel_grey.sql": require("../../drizzle/0001_early_rachel_grey.sql"),
-// };
-
-// export async function runMigrations() {
-//   console.log("Running SQL migrations...");
-
-//   const sqlite = openDatabaseSync("somchat.db");
-
-//   for (const file of Object.keys(MIGRATION_FILES)) {
-//     const module = MIGRATION_FILES[file];
-//     const asset = Asset.fromModule(module);
-
-//     await asset.downloadAsync();
-
-//     // Read file text via fetch:
-//     const response = await fetch(asset.localUri!);
-//     const sql = await response.text();
-
-//     sqlite.execSync(sql);
-//   }
-
-//   console.log("Migrations applied.");
-//   const result = sqlite.getAllSync(`SELECT name FROM sqlite_master WHERE type='table'`);
-//   console.log("Tables in DB:", result);
-
-//   return sqlite;
-// }
-// import { migrate } from "drizzle-orm/expo-sqlite/migrator";
-// import * as migrations from "../../drizzle/migrations";
-// import { db } from "./drizzle";
-
-// export async function runMigrations() {
-//   console.log("Running migrations...");
-//   await migrate(db, { migrations });
-//   console.log("Migrations complete.");
-// }
 import { Asset } from "expo-asset";
-import { openDatabaseSync } from "expo-sqlite";
+import { SQLiteDatabase } from "expo-sqlite";
 
 const MIGRATION_FILES: Record<string, any> = {
   "0000_unique_ego.sql": require("../../drizzle/0000_unique_ego.sql"),
   "0001_tearful_scarlet_witch.sql": require("../../drizzle/0001_tearful_scarlet_witch.sql"),
 };
 
-export async function runMigrations() {
+export async function runMigrations(sqlite: SQLiteDatabase) {
   console.log("Running SQL migrations...");
 
-  const sqlite = openDatabaseSync("somchat.db");
+  // const sqlite = openDatabaseSync("somchat.db");
 
   // 1. Create migrations tracking table if it doesn't exist
   sqlite.execSync(`

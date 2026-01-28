@@ -4,14 +4,20 @@ import React from "react";
 
 const TabLayout = () => {
   return (
-    <Tabs tabBar={props => <Tabbar {...props} />}>
-      <Tabs.Screen name="home" options={{title: "Home", headerShown: false}}/>
-      {/* <Tabs.Screen name="calls" options={{title: "Calls"}}/> */}
-      <Tabs.Screen name="settings" options={{title: "Settings"}}/> 
-      <Tabs.Screen name="profile" options={{title: "Profile", headerShown: false}}/>
-      <Tabs.Screen name="search" options={{title: "Search", headerShown: false}}/>
+    <Tabs
+      tabBar={(props) => <Tabbar {...props} />}
+      screenOptions={{
+        tabBarShowLabel: false,          // ← hide all labels globally
+        headerShown: false,              // most tabs don't need header
+      }}
+    >
+      <Tabs.Screen name="home"    options={{ title: "Home"    }} />
+      <Tabs.Screen name="search"  options={{ title: "Search"  }} />
+      {/* <Tabs.Screen name="calls" options={{ title: "Calls" }} /> */}
+      <Tabs.Screen name="settings" options={{ title: "Settings" }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );
-}
+};
 
 export default TabLayout;

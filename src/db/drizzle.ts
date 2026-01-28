@@ -1,8 +1,7 @@
-import { drizzle } from "drizzle-orm/expo-sqlite";
-import { openDatabaseSync } from "expo-sqlite";
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { openDatabaseSync } from 'expo-sqlite';
+import * as schema from './schema';
 
-// raw client
-export const sqlite = openDatabaseSync("somchat.db");
+const sqliteDb = openDatabaseSync('myapp.db'); // change name if needed
 
-// drizzle wrapper
-export const db = drizzle(sqlite);
+export const db = drizzle(sqliteDb, { schema });

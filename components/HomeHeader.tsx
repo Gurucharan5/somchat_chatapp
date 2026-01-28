@@ -1,60 +1,120 @@
-import { colors } from "@/constants/theme";
+import { colors, radius, spacingX, spacingY } from "@/constants/theme";
 import { useLocalUser } from "@/src/hooks/useLocalUser";
+import { scale } from "@/utils/styling";
 import { Feather } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { useState } from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { Image, Platform, Text, TouchableOpacity, View } from "react-native";
 import NewChatBottomSheet from "./NewChatBottomSheet";
-import Typo from "./Typo";
 
 export default function HomeHeader() {
   const user = useLocalUser();
   const [newChatVisible, setNewChatVisible] = useState(false);
+
   return (
-    <View className="flex-row items-center justify-between px-4 py-3">
-
-      {/* Left Bubble */}
-      <TouchableOpacity className="px-4 py-3 rounded-full border border-white/20 bg-white">
-        <Text className="text-slate-900 font-semibold font-">Edit</Text>
-      </TouchableOpacity>
-
-      {/* Title */}
-      {/* <Text className="text-lg font-semibold text-white">Chats</Text> */}
-      <Typo color={colors.white} size={20} fontWeight={"bold"}>Chats</Typo>
-      {/* Right Bubble */}
-      <View className="flex-row items-center px-4 py-2.5 rounded-full border border-white/20 bg-white">
-        <TouchableOpacity className="mr-5" onPress={()=> setNewChatVisible(true)}>
-          <Feather name="edit-3" size={18} color="black" />
-        </TouchableOpacity>
-        {/* <TouchableOpacity className="w-8 h-8 rounded-full bg-red-400 items-center justify-center">
-            <Feather name="user" size={18} color="black" />
-        </TouchableOpacity> */}
-        {/* Avatar bubble */}
-        <TouchableOpacity className="w-8 h-8 rounded-full overflow-hidden bg-gray-300 items-center justify-center">
+    <>
+      <BlurView
+        intensity={Platform.OS === "ios" ? 50 : 30}
+        tint="dark"
+        style={{
+          paddingHorizontal: spacingX._20,
+          paddingVertical: spacingY._15,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottomWidth: 1,
+          borderColor: "rgba(255,255,255,0.08)",
+        }}
+      >
+        {/* Left Avatar */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={{
+            width: scale(36),
+            height: scale(36),
+            borderRadius: radius.full,
+            overflow: "hidden",
+            backgroundColor: "rgba(255,255,255,0.15)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
           {user?.avatarUrl ? (
             <Image
               source={{ uri: user.avatarUrl }}
-              className="w-full h-full"
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
             />
           ) : (
-            <Feather name="user" size={18} color="black" />
+            <Feather name="user" size={18} color={colors.white} />
           )}
         </TouchableOpacity>
-      </View>
+
+        {/* Title */}
+        <Text
+          style={{
+            color: colors.white,
+            fontWeight: "600",
+            fontSize: scale(18),
+            letterSpacing: 0.3,
+          }}
+        >
+          Chats
+        </Text>
+
+        {/* Right Actions */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: spacingX._15,
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => setNewChatVisible(true)}
+            activeOpacity={0.6}
+            style={{
+              width: scale(32),
+              height: scale(32),
+              borderRadius: radius.full,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "rgba(255,255,255,0.12)",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.2)",
+            }}
+          >
+            <Feather name="edit-3" size={18} color={colors.white} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.6}
+            style={{
+              width: scale(32),
+              height: scale(32),
+              borderRadius: radius.full,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "rgba(255,255,255,0.12)",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.2)",
+            }}
+          >
+            <Feather name="more-horizontal" size={18} color={colors.white} />
+          </TouchableOpacity>
+        </View>
+      </BlurView>
 
       <NewChatBottomSheet
         visible={newChatVisible}
         onClose={() => setNewChatVisible(false)}
         onAddFriends={() => {
           setNewChatVisible(false);
-          // navigate to Search / Add friends
         }}
         onCreateGroup={() => {
           setNewChatVisible(false);
-          // navigate to Create Group (later)
         }}
       />
-
-
-    </View>
+    </>
   );
 }

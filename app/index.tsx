@@ -1,46 +1,30 @@
-// import { Redirect } from "expo-router";
+import { colors } from '@/constants/theme';
+import { StatusBar, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-// export default function Index() {
-//   return <Redirect href="/(auth)/Welcome" />;
-// }
-
-import { colors } from '@/constants/theme'
-import { useRouter } from 'expo-router'
-import React, { useEffect } from 'react'
-import { StatusBar, StyleSheet, View } from 'react-native'
-import Animated, { FadeInDown } from 'react-native-reanimated'
-
-const SplashScreen = () => {
-  const router = useRouter();
-  useEffect(() => {
-    setTimeout(() => {
-      // router.replace('/(auth)/Welcome')
-    },1500)
-  }, [])
+export default function AnimatedSplash() {
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={'light-content'} backgroundColor={colors.neutral900}/>
-      <Animated.Image 
+      <StatusBar barStyle="light-content" backgroundColor={colors.neutral900} />
+      <Animated.Image
+        entering={FadeInDown.duration(800).springify().delay(300)}
         source={require("../assets/images/somchat_logo.png")}
-        entering={FadeInDown.duration(700).springify()}
         style={styles.logo}
-        resizeMode={"contain"}
+        resizeMode="contain"
       />
     </View>
-  )
+  );
 }
-
-export default SplashScreen
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.neutral900
+    backgroundColor: colors.neutral900,
   },
   logo: {
     height: "23%",
     aspectRatio: 1,
-  }
-})
+  },
+});

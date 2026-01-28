@@ -1,36 +1,27 @@
+import { colors, radius, spacingX } from '@/constants/theme';
+import { useLocalUser } from '@/src/hooks/useLocalUser';
+import { verticalScale } from '@/utils/styling';
 import { Feather } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { JSX } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import React from 'react';
+import { Image, StyleSheet, TouchableOpacity } from 'react-native';
 
-function Tabbar({state, descriptors, navigation}: BottomTabBarProps) {
-  
-  type TabRoute = 'home' | 'settings' | 'profile' | 'search';
 
-const icon: Record<TabRoute, (props: any) => JSX.Element> = {
-  home: (props) => <Feather name="home" {...props} />,
-  settings: (props) => <Feather name="settings" {...props} />,
-  profile: (props) => <Feather name="user" {...props} />,
-  search: (props) => <Feather name="search" {...props} />,
-};
+// Assume you have a profile pic URL or local asset
+const PROFILE_PIC = 'https://example.com/your-avatar.jpg'; // or require('../assets/profile.jpg')
 
-  
+function Tabbar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const user = useLocalUser();
   return (
-    <View style={styles.tabBar}>
+    <BlurView
+      intensity={90}           // 70–100, higher = more blur
+      tint="dark"              // "dark" works great for your dark capsule
+      style={styles.tabBar}
+    >
       {state.routes.map((route, index) => {
-        const {options} = descriptors[route.key];
-        let label: string;
-
-        if (typeof options.tabBarLabel === 'string') {
-          label = options.tabBarLabel;
-        } else if (typeof options.title === 'string') {
-          label = options.title;
-        } else {
-          label = route.name;
-        }
-
-
         const isFocused = state.index === index;
+        const { options } = descriptors[route.key];
 
         const onPress = () => {
           const event = navigation.emit({
@@ -38,66 +29,117 @@ const icon: Record<TabRoute, (props: any) => JSX.Element> = {
             target: route.key,
             canPreventDefault: true,
           });
-          
           if (!isFocused && !event.defaultPrevented) {
             navigation.navigate(route.name);
           }
         };
 
-        const onLongPress = () => {
-          navigation.emit({
-            type: 'tabLongPress',
-            target: route.key,
-          });
-        };
+        // Special treatment for profile tab
+        if (route.name === 'profile') {
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              style={[
+                styles.profilePill,
+                isFocused && styles.profilePillFocused,
+              ]}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: user?.avatarUrl || PROFILE_PIC }}
+                style={styles.avatar}
+              />
+            </TouchableOpacity>
+          );
+        }
+
+        // Regular icon tabs
+        let iconName: keyof typeof Feather.glyphMap = 'home';
+        if (route.name === 'home')    iconName = 'home';
+        if (route.name === 'search')  iconName = 'search';
+        if (route.name === 'settings') iconName = 'settings';
+        // add more as needed (calls → 'phone' etc.)
 
         return (
           <TouchableOpacity
-            key={index}
-            accessibilityRole="button"
-            accessibilityState={isFocused ? {selected: true} : {}}
-            accessibilityLabel={options.tabBarAccessibilityLabel}
+            key={route.key}
             onPress={onPress}
-            onLongPress={onLongPress}
-            style={styles.tabbarItem}
+            style={[
+              styles.tabItem,
+              isFocused && styles.tabItemFocused,
+            ]}
+            activeOpacity={0.7}
           >
-            {icon[route.name as TabRoute]({ size: 24, color: isFocused ? '#673ab7' : '#222' })}
-            <Text style={{color: isFocused ? '#673ab7' : '#222'}}>
-              {label}
-            </Text>
+            <Feather
+              name={iconName}
+              size={24}
+              color={isFocused ? colors.primary : '#aaa'}
+            />
           </TouchableOpacity>
         );
       })}
-    </View>
+    </BlurView>
   );
 }
 
 export default Tabbar;
 
-
 const styles = StyleSheet.create({
- tabBar: {
-  position: 'absolute',
-  flexDirection: 'row',
-  bottom: 30,
-  width: '90%',
-  alignSelf: 'center',
-  alignItems: 'center',
-  backgroundColor: '#fff',
-  paddingHorizontal: 20,
-  paddingVertical: 15,
-  borderRadius: 35,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 10 },
-  shadowRadius: 10,
-  shadowOpacity: 0.25,
-  elevation: 5,
-},
+  tabBar: {
+    position: 'absolute',
+    bottom: verticalScale(18),           // good safe-area margin
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignSelf: 'center',
+    width: '92%',                        // almost full-width capsule
+    height: verticalScale(64),           // taller for comfort
+    backgroundColor: 'transparent',      // BlurView handles it
+    borderRadius: radius.full,           // perfect capsule
+    overflow: 'hidden',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
+  },
 
-  tabbarItem: {
+  tabItem: {
     flex: 1,
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 5
-  }
+  },
+
+  tabItemFocused: {
+    // Optional: subtle scale or bg
+    transform: [{ scale: 1.08 }],
+  },
+
+  profilePill: {
+    width: verticalScale(38),
+    height: verticalScale(38),
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    marginHorizontal: spacingX._10,
+    borderWidth: 2,
+    borderColor: 'rgba(250,204,21,0.6)', // your primary color accent
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+
+  profilePillFocused: {
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+  },
+
+  avatar: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
 });

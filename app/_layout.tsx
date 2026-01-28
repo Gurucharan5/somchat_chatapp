@@ -1,87 +1,51 @@
-import { auth, db as firestore } from "@/services/firebase";
+import { useAuthListener } from "@/services/useAuthListener";
+import { useOnlinePresence } from "@/services/useOnlinePresence";
 import { runMigrations } from "@/src/db/runMigrations";
 import { syncUsers } from "@/src/services/sync/syncUsers";
 import { ToastProvider } from "@/src/toast/ToastProvider";
 import { Slot, router } from "expo-router";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { SQLiteProvider, openDatabaseSync } from "expo-sqlite";
 import { useEffect, useState } from "react";
-import { AppState } from "react-native";
-import { configureGoogleSignIn } from "../services/googleConfig";
-import { useAuthListener } from "../services/useAuthListener";
-
 
 export default function RootLayout() {
-  const [dbReady, setDbReady] = useState(false);
+  const sqlite = openDatabaseSync("myapp.db");
   const { user, loading } = useAuthListener();
+  const [dbReady, setDbReady] = useState(false);
 
+  // 1) Run migrations
   useEffect(() => {
     (async () => {
-      configureGoogleSignIn();
-      
-      // 1) Run migrations first
-      await runMigrations();
-
-      // 2) Now DB is ready to use
+      await runMigrations(sqlite);
       setDbReady(true);
     })();
   }, []);
 
+  // 2) After DB is ready and user exists → start syncing
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
-
-    const userRef = doc(firestore, "users", uid);
-
-    const setOnline = () =>
-      updateDoc(userRef, {
-        online: true,
-        lastSeen: serverTimestamp(),
-      });
-
-    const setOffline = () =>
-      updateDoc(userRef, {
-        online: false,
-        lastSeen: serverTimestamp(),
-      });
-
-    setOnline();
-
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") setOnline();
-      else setOffline();
-    });
-
-    return () => {
-      sub.remove();
-      setOffline();
-    };
-  }, []);
-
-
-  useEffect(() => {
-    if (dbReady && !loading) {
-      if (user) {
-        router.replace("/(tabs)/home");
-      } else {
-        router.replace("/(auth)/Welcome");
-      }
-    }
-  }, [dbReady, user, loading]);
-
-  useEffect(() => {
-    if (dbReady && user) {
-      const unsubUsers = syncUsers(); // Here SELECT is safe
-      return () => unsubUsers();
-    }
+    if (!dbReady || !user) return;
+    const unsubscribe = syncUsers();
+    return unsubscribe;
   }, [dbReady, user]);
 
+  // 3) After auth & DB ready → navigate
+  useEffect(() => {
+    if (!dbReady || loading) return;
+    console.log(user,"-----user-----")
+    if (user) router.replace("/(tabs)/home");
+    else router.replace("/(auth)/Welcome");
+  }, [dbReady, loading, user]);
 
-  if (!dbReady) return null; // or splash screen
+  // 4) Setup online presence tracking
+  useOnlinePresence(user);
+
+  if (!dbReady) return null; // TODO: Splash screen here
 
   return (
-    <ToastProvider>
-      <Slot />
-    </ToastProvider>
-    
+    <SQLiteProvider databaseName="myapp.db">
+      <ToastProvider>
+        <Slot />
+      </ToastProvider>
+    </SQLiteProvider>
   );
 }
+
